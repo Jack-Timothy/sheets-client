@@ -77,7 +77,8 @@ func main() {
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
-	config, err := google.ConfigFromJSON(b, "https://www.googleapis.com/auth/spreadsheets.readonly")
+	// For full list of scopes: https://developers.google.com/identity/protocols/oauth2/scopes#sheets.
+	config, err := google.ConfigFromJSON(b, "https://www.googleapis.com/auth/spreadsheets")
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
@@ -88,10 +89,10 @@ func main() {
 		log.Fatalf("Unable to retrieve Sheets client: %v", err)
 	}
 
-	// Prints the names and majors of students in a sample spreadsheet:
-	// https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-	spreadsheetId := "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
-	readRange := "Class Data!A2:E"
+	// Prints the data in a test spreadsheet:
+	// https://docs.google.com/spreadsheets/d/15KWFkIY-RW81leDLXqahARB0gtSnWAIGDg-lkx2g04Q/edit
+	spreadsheetId := "15KWFkIY-RW81leDLXqahARB0gtSnWAIGDg-lkx2g04Q"
+	readRange := "Sheet1!A2:B3"
 	resp, err := srv.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
 	if err != nil {
 		log.Fatalf("Unable to retrieve data from sheet: %v", err)
@@ -100,10 +101,25 @@ func main() {
 	if len(resp.Values) == 0 {
 		fmt.Println("No data found.")
 	} else {
-		fmt.Println("Name, Major:")
+		fmt.Println("x, y:")
 		for _, row := range resp.Values {
-			// Print columns A and E, which correspond to indices 0 and 4.
-			fmt.Printf("%s, %s\n", row[0], row[4])
+			// Print columns A and B, which correspond to indices 0 and 1.
+			fmt.Printf("%s, %s\n", row[0], row[1])
 		}
+	}
+
+	fmt.Println("Writing...")
+	writeRange := readRange
+	newValues := &sheets.ValueRange{
+		MajorDimension: "ROWS",
+		Range: writeRange,
+		Values: [][]interface{}{
+			{2, 4},
+			{6, 8},
+		},
+	}
+	_, err = srv.Spreadsheets.Values.Update(spreadsheetId, writeRange, newValues).ValueInputOption("USER_ENTERED").Do()
+	if err != nil {
+		log.Fatalf("Unable to write data to sheet: %v", err)
 	}
 }
