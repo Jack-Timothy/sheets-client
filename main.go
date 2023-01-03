@@ -108,11 +108,50 @@ func main() {
 		}
 	}
 
+	fmt.Println("Checking for expense sheets...")
+	respSpreadsheet, err := srv.Spreadsheets.Get(spreadsheetId).Do()
+	if err != nil {
+		log.Fatalf("Failed to get spreadsheet: %v", err)
+	}
+
+	var missingMonths []string = []string{
+		"January", "February", "March", "April", "May", "June",
+		"July", "August", "September", "October", "November", "December",
+	}
+	for _, sheet := range respSpreadsheet.Sheets {
+		for monthIndex, monthName := range missingMonths {
+			if sheet.Properties.Title == monthName+"Expenses" {
+				missingMonths = append(missingMonths[:monthIndex], missingMonths[monthIndex+1:]...)
+				break
+			}
+		}
+	}
+
+	if len(missingMonths) > 0 {
+		fmt.Println("Creating expense sheets for months: ", missingMonths)
+		var batchAddSheetsReq sheets.BatchUpdateSpreadsheetRequest
+		for _, monthName := range missingMonths {
+			batchAddSheetsReq.Requests = append(batchAddSheetsReq.Requests, &sheets.Request{
+				AddSheet: &sheets.AddSheetRequest{
+					Properties: &sheets.SheetProperties{
+						Title: monthName + "Expenses",
+					},
+				},
+			})
+		}
+		_, err = srv.Spreadsheets.BatchUpdate(spreadsheetId, &batchAddSheetsReq).Do()
+		if err != nil {
+			log.Fatalf("Failed to add sheets: %v", err)
+		}
+	} else {
+		fmt.Println("All months already have expense sheets.")
+	}
+
 	fmt.Println("Writing...")
 	writeRange := readRange
 	newValues := &sheets.ValueRange{
 		MajorDimension: "ROWS",
-		Range: writeRange,
+		Range:          writeRange,
 		Values: [][]interface{}{
 			{2, 4},
 			{6, 8},
