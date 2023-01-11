@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/csv"
 	"encoding/json"
@@ -248,8 +249,57 @@ func main() {
 		})
 	}
 
-	fmt.Printf("Transaction Date\tPost Date\t%s\t%s\t%s\tAmount\t\tMemo\n", "Description"+strings.Repeat(" ", longestDescription-len("Description")), "Category"+strings.Repeat(" ", longestCategory-len("Category")), "Type"+strings.Repeat(" ", longestType-len("Type")))
+	revisedStatement := make([]transaction, 0)
 	for _, item := range statement {
-		fmt.Printf("%s\t\t%s\t%s\t%s\t%s\t%f\t%s\n", item.transactionDate, item.postedDate, item.description+strings.Repeat(" ", longestDescription-len(item.description)), item.category+strings.Repeat(" ", longestCategory-len(item.category)), item.itemType+strings.Repeat(" ", longestType-len(item.itemType)), item.amount, item.memo)
+		t := transaction{
+			date: item.transactionDate,
+			description: item.description,
+			amount: item.amount,
+		}
+
+		fmt.Printf("Transaction Date\tPost Date\t%s\t%s\t%s\tAmount\t\tMemo\n", "Description"+strings.Repeat(" ", longestDescription-len("Description")), "Category"+strings.Repeat(" ", longestCategory-len("Category")), "Type"+strings.Repeat(" ", longestType-len("Type")))
+		fmt.Printf("%s\t\t%s\t%s\t%s\t%s\t%f\t%s\n\n", item.transactionDate, item.postedDate, item.description+strings.Repeat(" ", longestDescription-len(item.description)), item.category+strings.Repeat(" ", longestCategory-len(item.category)), item.itemType+strings.Repeat(" ", longestType-len(item.itemType)), item.amount, item.memo)
+
+		fmt.Printf("Please provide a description of this transaction. Press Enter to accept the default description. Submit 'skip' to not include the transaction in the final statement.\n")
+		reader := bufio.NewReader(os.Stdin)
+		description, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatalf("Failed to scan description: %v", err)
+		}
+		description = strings.TrimSuffix(description, "\n")
+		description = strings.TrimSuffix(description, "\r")
+		if description == "skip" {
+			fmt.Printf("This transaction will be skipped.\n\n")
+			continue
+		}
+		if len(description) != 0 {
+			t.description = description
+		}
+		fmt.Printf("Received description: %s\n\n", t.description)
+
+		fmt.Printf("Please enter the enumeration of this transaction's category. Options are:\n")
+		categories := []string{
+			"Rent", "Utilities", "Groceries/Toiletries", "Food/Drinks Out", "Gas", 
+			"Other (Need)", "Other (Want)", "Gift Giving", "Donations",
+		}
+		for i, category := range categories {
+			fmt.Printf("%d. %s ", i+1, category)
+		}
+		fmt.Printf("\n")
+		var categoryEnum int
+		fmt.Scanf("%d\n", &categoryEnum)
+		if categoryEnum > len(categories) || categoryEnum < 1 {
+			log.Fatalf("Received invalid category enumeration %d.", categoryEnum)
+		}
+		t.category = categories[categoryEnum-1]
+		fmt.Printf("Received Category: %d. %s\n", categoryEnum, t.category)
+		
+		log.Printf("Adding transaction %+v to statement.\n\n", t)
+		revisedStatement = append(revisedStatement, t)
+	}
+
+	fmt.Printf("Full revised statement:\n")
+	for _, t := range revisedStatement {
+		fmt.Printf("%+v\n", t)
 	}
 }
