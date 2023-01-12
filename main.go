@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -31,6 +33,21 @@ type transaction struct {
 	description string
 	amount      float64
 }
+
+type keywords struct {
+	Rent                []string `json:"rent"`
+	Utilities           []string `json:"utilities"`
+	GroceriesToiletries []string `json:"groceries_toiletries"`
+	FoodDrinksOut       []string `json:"food_drinks_out"`
+	Gas                 []string `json:"gas"`
+	OtherNeed           []string `json:"other_need"`
+	OtherWant           []string `json:"other_want"`
+	GiftGiving          []string `json:"gift_giving"`
+	Donations           []string `json:"donations"`
+	Skip                []string `json:"skip"`
+}
+
+type keywordMap map[string]string
 
 // Retrieve a token, saves the token, then returns the generated client.
 func getClient(config *oauth2.Config) *http.Client {
@@ -249,51 +266,78 @@ func main() {
 		})
 	}
 
+	keywordsFile, err := os.Open("keywords.json")
+	if err != nil {
+		log.Fatalf("Failed to open keywords.json: %v", err)
+	}
+	defer keywordsFile.Close()
+
+	keywordsFileBytes, err := io.ReadAll(keywordsFile)
+	if err != nil {
+		log.Fatalf("Failed to read keywords.json: %v", err)
+	}
+	var kw keywords
+	err = json.Unmarshal(keywordsFileBytes, &kw)
+	if err != nil {
+		log.Fatalf("Failed to unmarshal keywords: %v", err)
+	}
+	kwMap, err := buildKeywordMap(kw)
+	if err != nil {
+		log.Fatalf("Failed to validate keywords: %v", err)
+	}
+
 	revisedStatement := make([]transaction, 0)
 	for _, item := range statement {
 		t := transaction{
-			date: item.transactionDate,
+			date:        item.transactionDate,
 			description: item.description,
-			amount: item.amount,
+			amount:      item.amount,
 		}
 
-		fmt.Printf("Transaction Date\tPost Date\t%s\t%s\t%s\tAmount\t\tMemo\n", "Description"+strings.Repeat(" ", longestDescription-len("Description")), "Category"+strings.Repeat(" ", longestCategory-len("Category")), "Type"+strings.Repeat(" ", longestType-len("Type")))
-		fmt.Printf("%s\t\t%s\t%s\t%s\t%s\t%f\t%s\n\n", item.transactionDate, item.postedDate, item.description+strings.Repeat(" ", longestDescription-len(item.description)), item.category+strings.Repeat(" ", longestCategory-len(item.category)), item.itemType+strings.Repeat(" ", longestType-len(item.itemType)), item.amount, item.memo)
+		var foundMatch bool
+		t.category, foundMatch = keywordSearch(kwMap, item.description)
+		if !foundMatch {
+			fmt.Printf("Transaction Date\tPost Date\t%s\t%s\t%s\tAmount\t\tMemo\n", "Description"+strings.Repeat(" ", longestDescription-len("Description")), "Category"+strings.Repeat(" ", longestCategory-len("Category")), "Type"+strings.Repeat(" ", longestType-len("Type")))
+			fmt.Printf("%s\t\t%s\t%s\t%s\t%s\t%f\t%s\n\n", item.transactionDate, item.postedDate, item.description+strings.Repeat(" ", longestDescription-len(item.description)), item.category+strings.Repeat(" ", longestCategory-len(item.category)), item.itemType+strings.Repeat(" ", longestType-len(item.itemType)), item.amount, item.memo)
 
-		fmt.Printf("Please provide a description of this transaction. Press Enter to accept the default description. Submit 'skip' to not include the transaction in the final statement.\n")
-		reader := bufio.NewReader(os.Stdin)
-		description, err := reader.ReadString('\n')
-		if err != nil {
-			log.Fatalf("Failed to scan description: %v", err)
-		}
-		description = strings.TrimSuffix(description, "\n")
-		description = strings.TrimSuffix(description, "\r")
-		if description == "skip" {
-			fmt.Printf("This transaction will be skipped.\n\n")
+			fmt.Printf("Please provide a description of this transaction. Press Enter to accept the default description. Submit 'skip' to not include the transaction in the final statement.\n")
+			reader := bufio.NewReader(os.Stdin)
+			description, err := reader.ReadString('\n')
+			if err != nil {
+				log.Fatalf("Failed to scan description: %v", err)
+			}
+			description = strings.TrimSuffix(description, "\n")
+			description = strings.TrimSuffix(description, "\r")
+			if description == "skip" {
+				fmt.Printf("This transaction will be skipped.\n\n")
+				continue
+			}
+			if len(description) != 0 {
+				t.description = description
+			}
+			fmt.Printf("Received description: %s\n\n", t.description)
+
+			fmt.Printf("Please enter the enumeration of this transaction's category. Options are:\n")
+			categories := []string{
+				"Rent", "Utilities", "Groceries/Toiletries", "Food/Drinks Out", "Gas",
+				"Other (Need)", "Other (Want)", "Gift Giving", "Donations",
+			}
+			for i, category := range categories {
+				fmt.Printf("%d. %s ", i+1, category)
+			}
+			fmt.Printf("\n")
+			var categoryEnum int
+			fmt.Scanf("%d\n", &categoryEnum)
+			if categoryEnum > len(categories) || categoryEnum < 1 {
+				log.Fatalf("Received invalid category enumeration %d.", categoryEnum)
+			}
+			t.category = categories[categoryEnum-1]
+			fmt.Printf("Received Category: %d. %s\n", categoryEnum, t.category)
+		} else if t.category == "skip" {
+			fmt.Printf("Skipping transaction %+v based on discovery of a skip keyword in the description.\n\n", item)
 			continue
 		}
-		if len(description) != 0 {
-			t.description = description
-		}
-		fmt.Printf("Received description: %s\n\n", t.description)
 
-		fmt.Printf("Please enter the enumeration of this transaction's category. Options are:\n")
-		categories := []string{
-			"Rent", "Utilities", "Groceries/Toiletries", "Food/Drinks Out", "Gas", 
-			"Other (Need)", "Other (Want)", "Gift Giving", "Donations",
-		}
-		for i, category := range categories {
-			fmt.Printf("%d. %s ", i+1, category)
-		}
-		fmt.Printf("\n")
-		var categoryEnum int
-		fmt.Scanf("%d\n", &categoryEnum)
-		if categoryEnum > len(categories) || categoryEnum < 1 {
-			log.Fatalf("Received invalid category enumeration %d.", categoryEnum)
-		}
-		t.category = categories[categoryEnum-1]
-		fmt.Printf("Received Category: %d. %s\n", categoryEnum, t.category)
-		
 		log.Printf("Adding transaction %+v to statement.\n\n", t)
 		revisedStatement = append(revisedStatement, t)
 	}
@@ -302,4 +346,49 @@ func main() {
 	for _, t := range revisedStatement {
 		fmt.Printf("%+v\n", t)
 	}
+}
+
+func buildKeywordMap(kw keywords) (keywordMap, error) {
+	categories := map[string][]string{
+		"Rent":                 kw.Rent,
+		"Utilities":            kw.Utilities,
+		"Groceries/Toiletries": kw.GroceriesToiletries,
+		"Food/Drinks Out":      kw.FoodDrinksOut,
+		"Gas":                  kw.Gas,
+		"Other (Need)":         kw.OtherNeed,
+		"Other (Want)":         kw.OtherWant,
+		"Gift Giving":          kw.GiftGiving,
+		"Donations":            kw.Donations,
+		"skip":                 kw.Skip,
+	}
+	kwMap := keywordMap{}
+	for category, categoryWords := range categories {
+		err := kwMap.add(category, categoryWords)
+		if err != nil {
+			return nil, fmt.Errorf("failed to add keywords for %s to keyword map: %v", category, err)
+		}
+	}
+	return kwMap, nil
+}
+
+func (kwMap keywordMap) add(category string, words []string) error {
+	if kwMap == nil {
+		return errors.New("keywordMap is nil")
+	}
+	for _, word := range words {
+		if _, ok := kwMap[word]; ok {
+			return fmt.Errorf("found duplicate word: %s", word)
+		}
+		kwMap[word] = category
+	}
+	return nil
+}
+
+func keywordSearch(kwMap keywordMap, description string) (category string, foundMatch bool) {
+	for word, associatedCategory := range kwMap {
+		if strings.Contains(strings.ToLower(description), strings.ToLower(word)) {
+			return associatedCategory, true
+		}
+	}
+	return "", false
 }

@@ -1,0 +1,32 @@
+{
+    "rent": [],
+    "utilities": [],
+    "groceries_toiletries": [
+        "wegmans",
+        "harris teeter",
+        "bitetoothpastebits"
+    ],
+    "food_drinks_out": [
+        "raleigh beer gar",
+        "milk bar",
+        "carolina ale house",
+        "chick-fil-a",
+        "dashi",
+        "the raleigh times",
+        "neomonde",
+        "ruckus pizza",
+        "tobacco road sports",
+        "big eds city market"
+    ],
+    "gas": [
+        "circle k",
+        "bp#"
+    ],
+    "other_need": [],
+    "other_want": [],
+    "gift_giving": [],
+    "donations": [],
+    "skip": [
+        "automatic payment - thank"
+    ]
+}
