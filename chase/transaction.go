@@ -20,16 +20,19 @@ type Transaction struct {
 }
 
 func (t Transaction) Print() {
-	dataStrings := []string{
-		t.TransactionDate,
-		t.PostedDate,
-		t.Description,
-		t.Category,
-		t.ItemType,
-		fmt.Sprintf("%f", t.Amount),
-		t.Memo,
+	transactionLines := [][]string{
+		expectedColumnNames,
+		{
+			t.TransactionDate,
+			t.PostedDate,
+			t.Description,
+			t.Category,
+			t.ItemType,
+			fmt.Sprintf("%f", t.Amount),
+			t.Memo,
+		},
 	}
-	cleanprint.Print(expectedColumnNames, dataStrings)
+	cleanprint.Print(transactionLines)
 }
 
 func (t Transaction) standardize(kwMap keywords.Map) (st standard.Transaction, skip bool, err error) {

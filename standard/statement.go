@@ -11,5 +11,5 @@ func (s Statement) Print() {
 	for _, t := range s {
 		statementStrings = append(statementStrings, t.makePrintableLine())
 	}
-	cleanprint.PrintLines(statementStrings)
+	cleanprint.Print(statementStrings)
 }
