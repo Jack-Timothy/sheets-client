@@ -14,8 +14,6 @@ type Transaction struct {
 	Amount      float64
 }
 
-type Statement []Transaction
-
 func (t *Transaction) GetDescriptionAndCategoryFromUser() (skip bool, err error) {
 	skip, err = t.getDescriptionFromUser()
 	if err != nil {
@@ -74,4 +72,13 @@ func (t *Transaction) getCategoryFromUser() error {
 	t.Category = categories[categoryEnum-1]
 	fmt.Printf("Received Category: %d. %s\n", categoryEnum, t.Category)
 	return nil
+}
+
+func (t Transaction) makePrintableLine() []string {
+	return []string{
+		t.Date,
+		t.Category,
+		t.Description,
+		fmt.Sprintf("%f", t.Amount),
+	}
 }

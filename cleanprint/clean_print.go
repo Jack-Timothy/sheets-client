@@ -10,6 +10,26 @@ type cleanLines struct {
 	line2 []string
 }
 
+type altCleanLines [][]string
+
+func PrintLines(lines [][]string) {
+	acl := makeAltCleanLines(lines)
+	outputLines := make([]string, 0)
+	for _, cleanLine := range acl {
+		var outputLine string
+		for _, str := range cleanLine {
+			outputLine += str + " "
+		}
+		if len(outputLine) > 0 {
+			outputLine = outputLine[:len(outputLine)-1]
+		}
+		outputLines = append(outputLines, outputLine)
+	}
+	for _, outputLine := range outputLines {
+		fmt.Println(outputLine)
+	}
+}
+
 func Print(rawFirstLine, rawSecondLine []string) {
 	cl := makeCleanLines(rawFirstLine, rawSecondLine)
 	var firstLine string
@@ -40,6 +60,13 @@ func makeCleanLines(l1, l2 []string) cleanLines {
 	return cl
 }
 
+func makeAltCleanLines(inputStrings [][]string) altCleanLines {
+	acl := altCleanLines(inputStrings)
+	acl.equalizeLineLengths()
+	acl.equalizeStringLengths()
+	return acl
+}
+
 func (cl *cleanLines) equalizeLineLengths() {
 	n := len(cl.line1) - len(cl.line2)
 	if n > 0 {
@@ -49,8 +76,32 @@ func (cl *cleanLines) equalizeLineLengths() {
 	}
 }
 
+func (acl *altCleanLines) equalizeLineLengths() {
+	var maxLineLength int
+	for _, line := range *acl {
+		lineLength := len(line)
+		if lineLength > maxLineLength {
+			maxLineLength = lineLength
+		}
+	}
+	for i := 0; i < len(*acl); i++ {
+		(*acl)[i] = altExtendSlice((*acl)[i], maxLineLength)
+	}
+}
+
 func extendSlice(s []string, n int) []string {
 	for i := 0; i < n; i++ {
+		s = append(s, "")
+	}
+	return s
+}
+
+func altExtendSlice(s []string, size int) []string {
+	if len(s) >= size {
+		return s
+	}
+	numToAdd := size - len(s)
+	for i := 0; i < numToAdd; i++ {
 		s = append(s, "")
 	}
 	return s
@@ -70,4 +121,32 @@ func equalizeStringLengths(str1, str2 string) (string, string) {
 		return str1 + strings.Repeat(" ", -1*n), str2
 	}
 	return str1, str2
+}
+
+func (acl *altCleanLines) equalizeStringLengths() {
+	for i := 0; i < len(*acl); i++ {
+		acl.equalizeStringLengthsForColumn(i)
+	}
+}
+
+func (acl *altCleanLines) equalizeStringLengthsForColumn(columnIndex int) {
+	var maxStringLength int
+	for _, line := range *acl {
+		stringLength := len(line[columnIndex])
+		if stringLength > maxStringLength {
+			maxStringLength = stringLength
+		}
+	}
+	for i := 0; i < len(*acl); i++ {
+		acl.extendStringLength(i, columnIndex, maxStringLength)
+	}
+}
+
+func (acl *altCleanLines) extendStringLength(rowIndex, columnIndex, size int) {
+	targetString := (*acl)[rowIndex][columnIndex]
+	stringLength := len(targetString)
+	if stringLength >= size {
+		return
+	}
+	(*acl)[rowIndex][columnIndex] = targetString + strings.Repeat(" ", size - len(targetString))
 }

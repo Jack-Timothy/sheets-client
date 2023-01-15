@@ -179,9 +179,7 @@ func main() {
 	}
 
 	fmt.Printf("Full revised statement:\n")
-	for _, t := range standardStatement {
-		fmt.Printf("%+v\n", t)
-	}
+	standardStatement.Print()
 }
 
 func getCsvContents(fileName string) (csvContents [][]string, err error) {
