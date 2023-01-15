@@ -11,7 +11,6 @@ import (
 	"os"
 
 	"github.com/Jack-Timothy/sheets-client/chase"
-	"github.com/Jack-Timothy/sheets-client/keywords"
 	"golang.org/x/oauth2"
 )
 
@@ -164,29 +163,23 @@ func main() {
 	// }
 
 	csvFileName := "sample-statement.csv"
-	statementData, err := getCsvContents(csvFileName)
+	csvContents, err := getCsvContents(csvFileName)
 	if err != nil {
 		log.Fatalf("Error getting contents of %s: %v", csvFileName, err)
 	}
 
-	statement, err := chase.CsvContentsToStatement(statementData)
+	chaseStatement, err := chase.CsvContentsToStatement(csvContents)
 	if err != nil {
 		log.Fatalf("Error converting csv contents to Chase statement: %v", err)
 	}
 
-	kwFileName := "keywords.json"
-	kwMap, err := keywords.MapFromFile(kwFileName)
-	if err != nil {
-		log.Fatalf("Failed to make keyword map from %s: %v", kwFileName, err)
-	}
-
-	revisedStatement, err := chase.StandardizeStatement(statement, kwMap)
+	standardStatement, err := chaseStatement.Standardize()
 	if err != nil {
 		log.Fatalf("Error standardizing Chase statement: %v", err)
 	}
 
 	fmt.Printf("Full revised statement:\n")
-	for _, t := range revisedStatement {
+	for _, t := range standardStatement {
 		fmt.Printf("%+v\n", t)
 	}
 }
