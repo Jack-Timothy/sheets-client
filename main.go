@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Jack-Timothy/sheets-client/chase"
+	"github.com/Jack-Timothy/sheets-client/standard"
 	"golang.org/x/oauth2"
 )
 
@@ -162,24 +162,30 @@ func main() {
 	// 	log.Fatalf("Unable to write data to sheet: %v", err)
 	// }
 
-	csvFileName := "sample-statement.csv"
-	csvContents, err := getCsvContents(csvFileName)
-	if err != nil {
-		log.Fatalf("Error getting contents of %s: %v", csvFileName, err)
-	}
+	// csvFileName := "sample-statement.csv"
+	// csvContents, err := getCsvContents(csvFileName)
+	// if err != nil {
+	// 	log.Fatalf("Error getting contents of %s: %v", csvFileName, err)
+	// }
 
-	chaseStatement, err := chase.CsvContentsToStatement(csvContents)
-	if err != nil {
-		log.Fatalf("Error converting csv contents to Chase statement: %v", err)
-	}
+	// chaseStatement, err := chase.CsvContentsToStatement(csvContents)
+	// if err != nil {
+	// 	log.Fatalf("Error converting csv contents to Chase statement: %v", err)
+	// }
 
-	standardStatement, err := chaseStatement.Standardize()
-	if err != nil {
-		log.Fatalf("Error standardizing Chase statement: %v", err)
-	}
+	// standardStatement, err := chaseStatement.Standardize()
+	// if err != nil {
+	// 	log.Fatalf("Error standardizing Chase statement: %v", err)
+	// }
 
-	fmt.Printf("Full revised statement:\n")
+	standardStatement := standard.BuildTestStatement(20)
+
 	standardStatement.Print()
+	fmt.Printf("\n")
+	err := standardStatement.AcceptUserEdits()
+	if err != nil {
+		log.Fatalf("Error during user edits of statement: %v", err)
+	}
 }
 
 func getCsvContents(fileName string) (csvContents [][]string, err error) {
