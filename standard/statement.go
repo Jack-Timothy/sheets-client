@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Jack-Timothy/sheets-client/cleanprint"
@@ -74,6 +75,14 @@ func (s *Statement) editBasedOnUserInput(selectedAction string) error {
 		return nil
 	}
 
+	if strings.HasPrefix(selectedAction, "delete") {
+		err := s.handleUserDeletingTransaction(selectedAction)
+		if err != nil {
+			return fmt.Errorf("failed to handle user deleting transaction: %w", err)
+		}
+		return nil
+	}
+
 	fmt.Printf("'%s' is not a valid action.", selectedAction)
 	return nil
 }
@@ -97,6 +106,23 @@ func (s *Statement) addTransaction(t Transaction) error {
 	if err != nil {
 		return fmt.Errorf("failed to sort statement: %w", err)
 	}
+	return nil
+}
+
+func (s *Statement) handleUserDeletingTransaction(userInput string) error {
+	userInput = strings.TrimPrefix(userInput, "delete")
+	userInput = strings.TrimSpace(userInput)
+	indexOfTransactionToDelete, err := strconv.ParseInt(userInput, 10, bitsPerWord)
+	if err != nil {
+		return fmt.Errorf("failed to parse integer from user input: %w", err)
+	}
+	if indexOfTransactionToDelete < 0 {
+		return fmt.Errorf("received index %d but need non-negative index", indexOfTransactionToDelete)
+	}
+	if int(indexOfTransactionToDelete) >= len(*s) {
+		return fmt.Errorf("%d exceeds the bounds of statement which has %d transactions", indexOfTransactionToDelete, len(*s))
+	}
+	*s = append((*s)[:indexOfTransactionToDelete], (*s)[indexOfTransactionToDelete+1:]...)
 	return nil
 }
 
