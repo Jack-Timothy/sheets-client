@@ -35,6 +35,8 @@ func getUserInput() (userInput string, err error) {
 }
 
 func (s *Statement) AcceptUserEdits() error {
+	fmt.Println("Statement:")
+	s.Print()
 	for {
 		fmt.Println("Please select one of the following actions:")
 		fmt.Println("- Enter 'ok' to accept statement.")
@@ -57,6 +59,9 @@ func (s *Statement) AcceptUserEdits() error {
 			log.Printf("Error editing based on user input: %v", err)
 			continue
 		}
+
+		fmt.Println("Updated statement:")
+		s.Print()
 	}
 }
 

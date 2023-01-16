@@ -180,8 +180,6 @@ func main() {
 
 	standardStatement := standard.BuildTestStatement(20)
 
-	standardStatement.Print()
-	fmt.Printf("\n")
 	err := standardStatement.AcceptUserEdits()
 	if err != nil {
 		log.Fatalf("Error during user edits of statement: %v", err)

@@ -21,6 +21,7 @@ func Print(inputStrings [][]string) {
 	for _, outputLine := range outputLines {
 		fmt.Println(outputLine)
 	}
+	fmt.Printf("\n")
 }
 
 func equalizeLinesAndStrings(linesOfStrings [][]string) [][]string {
