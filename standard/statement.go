@@ -2,6 +2,7 @@ package standard
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -14,9 +15,13 @@ import (
 
 type Statement []Transaction
 
+var columnTitles []string = []string{
+	"Index", "Date", "Category", "Description", "Amount",
+}
+
 func (s Statement) Print() {
 	statementStrings := [][]string{
-		{"Index", "Date", "Category", "Description", "Amount"},
+		columnTitles,
 	}
 	for i, t := range s {
 		statementStrings = append(statementStrings, t.makePrintableLine(i))
@@ -66,24 +71,29 @@ func (s *Statement) AcceptUserEdits() error {
 	}
 }
 
-func (s *Statement) editBasedOnUserInput(selectedAction string) error {
-	if selectedAction == "add" {
-		err := s.handleUserAddingTransaction()
-		if err != nil {
+func (s *Statement) editBasedOnUserInput(input string) error {
+	frags := strings.Split(input, " ")
+	if len(frags) == 0 {
+		return errors.New("user input is empty")
+	}
+	selectedAction := frags[0]
+
+	switch selectedAction {
+	case "add":
+		if err := s.handleUserAddingTransaction(); err != nil {
 			return fmt.Errorf("failed to handle user adding transaction: %w", err)
 		}
-		return nil
-	}
-
-	if strings.HasPrefix(selectedAction, "delete") {
-		err := s.handleUserDeletingTransaction(selectedAction)
-		if err != nil {
+	case "delete":
+		if err := s.handleUserDeletingTransaction(input); err != nil {
 			return fmt.Errorf("failed to handle user deleting transaction: %w", err)
 		}
-		return nil
+	case "edit":
+		if err := s.handleUserEditingTransaction(input); err != nil {
+			return fmt.Errorf("failed to handle user editing transaction: %w", err)
+		}
+	default:
+		return fmt.Errorf("'%s' is not a valid action", selectedAction)
 	}
-
-	fmt.Printf("'%s' is not a valid action.", selectedAction)
 	return nil
 }
 
@@ -109,20 +119,91 @@ func (s *Statement) addTransaction(t Transaction) error {
 	return nil
 }
 
-func (s *Statement) handleUserDeletingTransaction(userInput string) error {
-	userInput = strings.TrimPrefix(userInput, "delete")
-	userInput = strings.TrimSpace(userInput)
-	indexOfTransactionToDelete, err := strconv.ParseInt(userInput, 10, bitsPerWord)
+func (s *Statement) handleUserDeletingTransaction(input string) error {
+	input = strings.TrimPrefix(input, "delete")
+	input = strings.TrimSpace(input)
+	indexToDelete, err := strconv.ParseUint(input, 10, bitsPerWord)
 	if err != nil {
-		return fmt.Errorf("failed to parse integer from user input: %w", err)
+		return fmt.Errorf("failed to parse unsigned integer from user input: %w", err)
 	}
-	if indexOfTransactionToDelete < 0 {
-		return fmt.Errorf("received index %d but need non-negative index", indexOfTransactionToDelete)
+	if err := s.deleteTransactionIndex(int(indexToDelete)); err != nil {
+		return fmt.Errorf("failed to delete transaction with index %d: %w", indexToDelete, err)
 	}
-	if int(indexOfTransactionToDelete) >= len(*s) {
-		return fmt.Errorf("%d exceeds the bounds of statement which has %d transactions", indexOfTransactionToDelete, len(*s))
+	return nil
+}
+
+func (s *Statement) deleteTransactionIndex(index int) error {
+	if index < 0 {
+		return fmt.Errorf("given index %d is negative", index)
 	}
-	*s = append((*s)[:indexOfTransactionToDelete], (*s)[indexOfTransactionToDelete+1:]...)
+	if index >= len(*s) {
+		return fmt.Errorf("%d exceeds the bounds of statement which has %d transactions", index, len(*s))
+	}
+	*s = append((*s)[:index], (*s)[index+1:]...)
+	return nil
+}
+
+func (s *Statement) getTransactionWithIndex(index int) (*Transaction, error) {
+	if index < 0 {
+		return nil, fmt.Errorf("given index %d is negative", index)
+	}
+	if index >= len(*s) {
+		return nil, fmt.Errorf("%d exceeds the bounds of statement which has %d transactions", index, len(*s))
+	}
+	return &(*s)[index], nil
+}
+
+func (s *Statement) handleUserEditingTransaction(input string) error {
+	input = strings.TrimPrefix(input, "edit")
+	input = strings.TrimSpace(input)
+	indexToEdit, err := strconv.ParseUint(input, 10, bitsPerWord)
+	if err != nil {
+		return fmt.Errorf("failed to parse unsigned integer from user input: %w", err)
+	}
+
+	tr, err := s.getTransactionWithIndex(int(indexToEdit))
+	if err != nil {
+		return fmt.Errorf("failed to get transaction with index %d: %w", indexToEdit, err)
+	}
+
+	fmt.Println("Editing the following transaction:")
+	tr.printWithHeadings()
+
+	// edit Date
+	fmt.Println("Enter a new Date or press Enter to leave it the same.")
+	dateInput, err := getUserInput()
+	if err != nil {
+		return fmt.Errorf("failed to get user input for Date: %w", err)
+	}
+	if dateInput != "" {
+		if err = validateDateString(input); err != nil {
+			return fmt.Errorf("invalid date format: %w", err)
+		}
+		tr.Date = dateInput
+	}
+
+	// edit Category
+	if err = tr.getCategoryFromUser(); err != nil {
+		return fmt.Errorf("failed to get category from user: %w", err)
+	}
+
+	// edit Description
+	fmt.Println("Enter a new Description or press Enter to leave it the same.")
+	descriptionInput, err := getUserInput()
+	if err != nil {
+		return fmt.Errorf("failed to get user input for Description: %w", err)
+	}
+	if descriptionInput != "" {
+		tr.Description = descriptionInput
+	}
+
+	// edit Amount
+	if err = tr.getAmountFromUser(); err != nil {
+		return fmt.Errorf("failed to get amount from user: %w", err)
+	}
+
+	fmt.Println("Resulting transaction data after edits:")
+	tr.printWithHeadings()
 	return nil
 }
 

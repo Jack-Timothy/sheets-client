@@ -163,6 +163,12 @@ func isDateXBeforeDateY(x, y string) bool {
 	return xDay < yDay
 }
 
+func (tr *Transaction) printWithHeadings() {
+	statementCopy := make(Statement, 0, 1)
+	statementCopy = append(statementCopy, *tr)
+	statementCopy.Print()
+}
+
 func (t *Transaction) makePrintableLine(index int) []string {
 	return []string{
 		fmt.Sprintf("%d", index),
