@@ -19,12 +19,16 @@ var columnTitles []string = []string{
 	"Index", "Date", "Category", "Description", "Amount",
 }
 
-func (s Statement) Print() {
+func (s Statement) Print(withIndex bool) {
+	headings := columnTitles
+	if !withIndex {
+		headings = headings[1:]
+	}
 	statementStrings := [][]string{
-		columnTitles,
+		headings,
 	}
 	for i, t := range s {
-		statementStrings = append(statementStrings, t.makePrintableLine(i))
+		statementStrings = append(statementStrings, t.makePrintableLine(i, withIndex))
 	}
 	cleanprint.Print(statementStrings)
 }
@@ -42,7 +46,7 @@ func getUserInput() (userInput string, err error) {
 
 func (s *Statement) AcceptUserEdits() error {
 	fmt.Println("Statement:")
-	s.Print()
+	s.Print(true)
 	for {
 		fmt.Println("Please select one of the following actions:")
 		fmt.Println("- Enter 'ok' to accept statement.")
@@ -67,7 +71,7 @@ func (s *Statement) AcceptUserEdits() error {
 		}
 
 		fmt.Println("Updated statement:")
-		s.Print()
+		s.Print(true)
 	}
 }
 
@@ -176,7 +180,7 @@ func (s *Statement) handleUserEditingTransaction(input string) error {
 		return fmt.Errorf("failed to get user input for Date: %w", err)
 	}
 	if dateInput != "" {
-		if err = validateDateString(input); err != nil {
+		if err = validateDateString(dateInput); err != nil {
 			return fmt.Errorf("invalid date format: %w", err)
 		}
 		tr.Date = dateInput
