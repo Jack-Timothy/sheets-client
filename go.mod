@@ -1,6 +1,6 @@
 module github.com/Jack-Timothy/sheets-client
 
-go 1.19
+go 1.20
 
 require golang.org/x/oauth2 v0.3.0
 
