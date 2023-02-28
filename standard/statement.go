@@ -223,6 +223,14 @@ func (s *Statement) sort() error {
 	return nil
 }
 
+func (s *Statement) GetRawData() [][]interface{} {
+	rawData := make([][]interface{}, 0, len(*s))
+	for _, t := range *s {
+		rawData = append(rawData, t.getRawData())
+	}
+	return rawData
+}
+
 func BuildTestStatement(numTransactions int) Statement {
 	s := make(Statement, 0, numTransactions)
 	for i := 0; i < numTransactions; i++ {

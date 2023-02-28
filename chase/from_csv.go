@@ -58,7 +58,7 @@ func csvRowToTransaction(row []string) (t Transaction, err error) {
 		Description:     row[2],
 		Category:        row[3],
 		ItemType:        row[4],
-		Amount:          amount,
+		Amount:          -1 * amount, // chase marks charges as negative numbers
 		Memo:            row[6],
 	}, nil
 }

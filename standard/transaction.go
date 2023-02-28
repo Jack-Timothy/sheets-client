@@ -15,6 +15,15 @@ type Transaction struct {
 	Amount      float64
 }
 
+func (t *Transaction) getRawData() []interface{} {
+	return []interface{}{
+		t.Date,
+		t.Category,
+		t.Description,
+		t.Amount,
+	}
+}
+
 func (t *Transaction) GetDescriptionAndCategoryFromUser() (skip bool, err error) {
 	skip, err = t.getDescriptionFromUserWithOptions()
 	if err != nil {
